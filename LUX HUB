@@ -1,5 +1,5 @@
 -- ============================
--- AUTO GRAB - SPEED EDITION
+-- AUTO GRAB - LUX EDITION
 -- ============================
 
 local Players = game:GetService("Players")
@@ -21,8 +21,8 @@ local LUX = {
 }
 
 -- ============== الإعدادات ==============
-local GRAB_SPEED = 0.01        -- سرعة خاطفة
-local SCAN_DELAY = 0.05        -- كشف سريع جداً
+local GRAB_SPEED = 0.06
+local SCAN_DELAY = 0.2
 -- =====================================
 
 local grabEnabled = false
@@ -92,7 +92,7 @@ local function fireStealPrompt(prompt)
         pcall(function()
             fireproximityprompt(prompt, 10000)
             prompt:InputHoldBegin()
-            task.wait(0.01)
+            task.wait(GRAB_SPEED)
             prompt:InputHoldEnd()
         end)
     end)
@@ -115,14 +115,30 @@ local function startGrab()
                 local prompt = findNearestStealPrompt(root)
                 if prompt then
                     progressBar.Visible = true
-                    fireStealPrompt(prompt)
-                    progressFill.Size = UDim2.new(1,0,1,0)
-                    percentLabel.Text = "DONE"
-                else
-                    resetBar()
+                    local start = tick()
+                    
+                    while grabEnabled and prompt and prompt.Parent and prompt.Enabled do
+                        local pos = getPromptPos(prompt)
+                        local dist = root and (root.Position - pos).Magnitude
+                        
+                        if not pos or not prompt.MaxActivationDistance or dist > prompt.MaxActivationDistance then 
+                            break 
+                        end
+                        
+                        local p = math.clamp((tick() - start) / GRAB_SPEED, 0, 1)
+                        progressFill.Size = UDim2.new(p,0,1,0)
+                        percentLabel.Text = math.floor(p*100).."%"
+                        
+                        if p >= 0.99 then
+                            fireStealPrompt(prompt)
+                            start = tick()
+                        end
+                        task.wait()
+                    end
                 end
             end
             
+            resetBar()
             task.wait(SCAN_DELAY)
         end
         resetBar(true)
@@ -159,10 +175,10 @@ gradBtn.Rotation = 45
 mainButton.Active = true
 mainButton.Draggable = true
 
--- Progress Bar - تحت بـ 20 بكسل
+-- Progress Bar
 progressBar = Instance.new("Frame")
 progressBar.Size = UDim2.new(0,200,0,20)
-progressBar.Position = UDim2.new(0.5,-100,0,120)
+progressBar.Position = UDim2.new(0.5,-100,0,70)
 progressBar.BackgroundColor3 = LUX.DarkBG
 progressBar.BackgroundTransparency = 0.2
 progressBar.Visible = false
